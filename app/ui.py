@@ -199,10 +199,6 @@ button {
     margin: 8px 0;
 }
 
-.chat-wrapper {
-    max-width: 900px;
-    margin: auto;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -409,8 +405,6 @@ if not st.session_state.messages:
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
-
 chat_container = st.container()
 
 with chat_container:
@@ -465,4 +459,4 @@ if user_input:
     st.session_state.messages.append({"role": "bot", "content": response})
 
     st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+    

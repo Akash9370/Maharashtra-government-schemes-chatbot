@@ -405,36 +405,12 @@ if not st.session_state.messages:
     </div>
     """, unsafe_allow_html=True)
 
-chat_container = st.container()
-
-with chat_container:
-    for msg in st.session_state.messages:
-        if msg["role"] == "user":
-            formatted_user = msg['content'].replace("\n", "<br>")
-
-            st.markdown(f"""
-                <div class="chat-row user-row">
-                    <div class="user-msg">{formatted_user}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        else:
-            formatted_bot = msg['content'].replace("\n", "<br>")
-
-            st.markdown(f"""
-                <div class="chat-row bot-row">
-                    <div class="bot-msg">{formatted_bot}</div>
-                </div>
-            """, unsafe_allow_html=True)
 # ------------------------
 # Input Area
 # ------------------------
 user_input = st.chat_input(
     "Ask about Maharashtra government schemes..."
 )
-
-
-
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
@@ -458,5 +434,24 @@ if user_input:
             response = f"⚠️ Error: {e}"
     st.session_state.messages.append({"role": "bot", "content": response})
 
-    st.rerun()
-    
+chat_container = st.container()
+
+with chat_container:
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            formatted_user = msg['content'].replace("\n", "<br>")
+
+            st.markdown(f"""
+                <div class="chat-row user-row">
+                    <div class="user-msg">{formatted_user}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        else:
+            formatted_bot = msg['content'].replace("\n", "<br>")
+
+            st.markdown(f"""
+                <div class="chat-row bot-row">
+                    <div class="bot-msg">{formatted_bot}</div>
+                </div>
+            """, unsafe_allow_html=True)

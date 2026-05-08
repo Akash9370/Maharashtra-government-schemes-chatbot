@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 #from langchain_google_genai import ChatGoogleGenerativeAI
-from retriever import get_retriever
+from app.retriever import get_retriever
 from app.crud import get_all_schemes
 
 def detect_query_category(query):

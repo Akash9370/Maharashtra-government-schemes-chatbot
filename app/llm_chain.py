@@ -1,8 +1,7 @@
 import os
 from dotenv import load_dotenv
-import google.generativeai as genai
-#from langchain_google_genai import ChatGoogleGenerativeAI
 from app.crud import get_all_schemes
+load_dotenv()
 
 def detect_query_category(query):
     q = query.lower()
@@ -33,13 +32,6 @@ def detect_query_category(query):
         return "loan"
 
     return None
-
-
-load_dotenv()
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
-model = genai.GenerativeModel("models/gemini-flash-latest")
-
 
 PROMPT_TEMPLATE = """
 You are a helpful assistant specializing in Maharashtra government schemes.
@@ -114,6 +106,13 @@ def scheme_matches_category(s, category):
 
     # Fallback to keyword matching for old General/empty categories
     return any(w in text for w in CATEGORY_KEYWORDS.get(category, []))
+
+def get_gemini_model():
+    import google.generativeai as genai
+
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+    return genai.GenerativeModel("models/gemini-flash-latest")
 def ask_question(question: str, chat_history: str = "") -> dict:
     combined_query = f"{chat_history} {question}"
     category = detect_query_category(combined_query)
@@ -165,6 +164,7 @@ def ask_question(question: str, chat_history: str = "") -> dict:
         chat_history=chat_history
     )
 
+    model = get_gemini_model()
     response = model.generate_content(prompt)
 
     return {

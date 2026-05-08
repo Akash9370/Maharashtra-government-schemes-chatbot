@@ -451,12 +451,13 @@ if user_input:
             for msg in st.session_state.messages[-6:]:
                 chat_history += f"{msg['role']}: {msg['content']}\n"
 
-            result = ask_question(
-                question=user_input,
-                chat_history=chat_history
-            )
+            #result = ask_question(
+               # question=user_input,
+                #chat_history=chat_history
+            #)
 
-            response = result["answer"]
+            #response = result["answer"]
+            response = "Test response working"
 
 
         except Exception as e:

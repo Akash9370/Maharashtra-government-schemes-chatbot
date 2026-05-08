@@ -140,6 +140,10 @@ def ask_question(question: str, chat_history: str = "") -> dict:
             }
 
         context = "\n\n".join(matched_docs)
+        return {
+            "answer": context,
+            "sources": []
+        }
 
     # SEMANTIC ROUTE: for natural queries like "I need hostel help for college"
     else:

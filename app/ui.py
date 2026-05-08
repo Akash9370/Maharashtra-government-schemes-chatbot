@@ -2,7 +2,7 @@ import streamlit as st
 from app.llm_chain import ask_question
 import logging
 from app.crud import add_scheme, get_all_schemes, scheme_exists, delete_scheme, update_scheme
-from index_builder import build_index
+from app.index_builder import build_index
 import os
 from dotenv import load_dotenv
 import pandas as pd

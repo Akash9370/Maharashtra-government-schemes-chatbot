@@ -1,6 +1,4 @@
 from app.crud import get_all_schemes
-from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 import os
 from dotenv import load_dotenv
 import shutil
@@ -11,6 +9,8 @@ print("HF_TOKEN loaded:", bool(os.getenv("HF_TOKEN")))
 PERSIST_DIR = "info/chroma_db"
 
 def build_index():
+    from langchain_community.vectorstores import Chroma
+    from langchain_huggingface import HuggingFaceEmbeddings
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )

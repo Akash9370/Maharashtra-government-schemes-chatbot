@@ -2,7 +2,6 @@ import streamlit as st
 from app.llm_chain import ask_question
 import logging
 from app.crud import add_scheme, get_all_schemes, scheme_exists, delete_scheme, update_scheme
-from app.index_builder import build_index
 import os
 from dotenv import load_dotenv
 import pandas as pd
@@ -260,6 +259,8 @@ if admin_mode:
                         "category": category
                     })
 
+                    from app.index_builder import build_index
+
                     build_index()
                     st.cache_resource.clear()
 
@@ -307,6 +308,7 @@ if admin_mode:
 
                     added += 1
 
+                from app.index_builder import build_index
                 build_index()
                 st.cache_resource.clear()
 
@@ -360,6 +362,7 @@ if admin_mode:
                 "category": new_category
             })
 
+            from app.index_builder import build_index
             build_index()
             st.cache_resource.clear()
 
@@ -368,6 +371,7 @@ if admin_mode:
         if st.button("Delete Scheme"):
             delete_scheme(selected_scheme.id)
 
+            from app.index_builder import build_index
             build_index()
             st.cache_resource.clear()
 
@@ -379,6 +383,7 @@ if admin_mode:
 
         if st.button("Rebuild Index"):
             with st.spinner("Rebuilding index..."):
+                from app.index_builder import build_index
                 build_index()
             st.success("✅ Index rebuilt successfully")
 else:

@@ -3,6 +3,5 @@
 __pycache__/
 *.pyc
 info/chroma_db/
-app/schemes.db
 .DS_Store
 .idea/

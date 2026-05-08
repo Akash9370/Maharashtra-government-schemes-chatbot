@@ -406,52 +406,25 @@ if not st.session_state.messages:
     """, unsafe_allow_html=True)
 
 # ------------------------
+# Chat Messages
+# ------------------------
+for msg in st.session_state.messages:
+    if msg["role"] == "user":
+        with st.chat_message("user"):
+            st.markdown(msg["content"])
+    else:
+        with st.chat_message("assistant"):
+            st.markdown(msg["content"])
+
+# ------------------------
 # Input Area
 # ------------------------
-user_input = st.chat_input(
-    "Ask about Maharashtra government schemes..."
-)
+user_input = st.chat_input("Ask about Maharashtra government schemes...")
+
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    with st.spinner("🔎 Searching government schemes..."):
-        try:
-            chat_history = ""
+    # temporary deployment test
+    response = "Test response working"
 
-            for msg in st.session_state.messages[-6:]:
-                chat_history += f"{msg['role']}: {msg['content']}\n"
-
-            #result = ask_question(
-               # question=user_input,
-                #chat_history=chat_history
-            #)
-
-            #response = result["answer"]
-            response = "Test response working"
-
-
-        except Exception as e:
-            response = f"⚠️ Error: {e}"
     st.session_state.messages.append({"role": "bot", "content": response})
-
-chat_container = st.container()
-
-with chat_container:
-    for msg in st.session_state.messages:
-        if msg["role"] == "user":
-            formatted_user = msg['content'].replace("\n", "<br>")
-
-            st.markdown(f"""
-                <div class="chat-row user-row">
-                    <div class="user-msg">{formatted_user}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        else:
-            formatted_bot = msg['content'].replace("\n", "<br>")
-
-            st.markdown(f"""
-                <div class="chat-row bot-row">
-                    <div class="bot-msg">{formatted_bot}</div>
-                </div>
-            """, unsafe_allow_html=True)

@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 #from langchain_google_genai import ChatGoogleGenerativeAI
-from app.retriever import get_retriever
 from app.crud import get_all_schemes
 
 def detect_query_category(query):
@@ -145,6 +144,7 @@ def ask_question(question: str, chat_history: str = "") -> dict:
 
     # SEMANTIC ROUTE: for natural queries like "I need hostel help for college"
     else:
+        from app.retriever import get_retriever
         retriever = get_retriever(k=10)
         query = question + " Maharashtra government scheme"
         docs = retriever.invoke(query)

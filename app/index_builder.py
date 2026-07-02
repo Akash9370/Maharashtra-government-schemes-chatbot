@@ -49,7 +49,7 @@ def build_index():
         # 🎓 STUDENT
         if any(w in text for w in [
             "student", "scholarship", "school", "college",
-            "education", "hostel", "exam", "eklavy", "vidya", "shishya"
+            "education", "hostel", "exam", "eklavya", "vidya", "shishya"
         ]):
             return "student"
 
@@ -137,8 +137,14 @@ def build_index():
         persist_directory=PERSIST_DIR
     )
 
-    print("Index built successfully")
-    return vectorstore
+    vectorstore.persist()
 
+    print(f"Index built successfully with {len(docs)} schemes")
+    print(
+        "Contains dummy scheme:",
+        any("Maharashtra Digital Learning Support Scheme" in d for d in docs)
+    )
+
+    return vectorstore
 if __name__ == "__main__":
     build_index()

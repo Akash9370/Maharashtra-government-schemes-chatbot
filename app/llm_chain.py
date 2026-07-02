@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from app.crud import get_all_schemes
+from app.crud import  get_all_schemes
 load_dotenv()
 
 def detect_query_category(query):
@@ -39,6 +39,9 @@ You are a helpful assistant specializing in Maharashtra government schemes.
 STRICT INSTRUCTIONS:
 - Answer ONLY using the provided context.
 - Do NOT add schemes that are not in the context.
+- Do NOT list every scheme from the context.
+- Select only schemes directly relevant to the user's exact question.
+- Return maximum 5 schemes unless the user asks for more.
 - If no relevant scheme is found, say so politely.
 - If the user asks a follow-up like "more", "only 2?", "second scheme", or "what about other?", use the conversation history to understand the previous topic.
 
@@ -131,7 +134,7 @@ def ask_question(question: str, chat_history: str = "") -> dict:
         Benefits: {s.benefits}
         """)
 
-        matched_docs = matched_docs[:15]
+        matched_docs = matched_docs[:10]
 
         if not matched_docs:
             return {
@@ -152,7 +155,7 @@ def ask_question(question: str, chat_history: str = "") -> dict:
         query = question + " Maharashtra government scheme"
         docs = retriever.invoke(query)
 
-        docs = docs[:15]
+        docs = docs[:10]
 
         if not docs:
             return {

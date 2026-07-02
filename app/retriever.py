@@ -1,7 +1,7 @@
 import streamlit as st
 
 @st.cache_resource(show_spinner=False)
-def get_retriever(persist_dir="info/chroma_db", k=6):
+def get_retriever(persist_dir="info/chroma_db", k=10):
     from langchain_community.vectorstores import Chroma
     from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -10,7 +10,8 @@ def get_retriever(persist_dir="info/chroma_db", k=6):
     )
 
     vectorstore = Chroma(
-        persist_directory=persist_dir
+        persist_directory=persist_dir,
+        embedding_function=embeddings
     )
 
     return vectorstore.as_retriever(search_kwargs={"k": k})

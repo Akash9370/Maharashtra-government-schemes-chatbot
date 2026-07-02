@@ -44,7 +44,7 @@ def safe_rmtree(path, retries=10, delay=1.0):
             time.sleep(delay)
 
 def _scheme_to_text(s):
-    category = detect_category(f"{s.name} {s.eligibility} {s.benefits} {s.description}")
+    category = detect_category(s)
     extra_keywords = CATEGORY_MAP.get(category, "")
     text = f"""Government Scheme in {s.state or 'Maharashtra'}.
 

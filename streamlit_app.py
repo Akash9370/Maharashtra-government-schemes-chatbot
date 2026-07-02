@@ -105,6 +105,7 @@ if st.session_state.admin_logged_in:
             )
 
             if st.button("Update Scheme"):
+                old_name = selected_scheme.name  # capture before it changes
 
                 success = update_scheme(selected_scheme.id, {
                     "name": new_name,
@@ -118,12 +119,12 @@ if st.session_state.admin_logged_in:
                 if success:
                     with st.spinner("Updating knowledge base..."):
                         try:
-                            from app.retriever import get_retriever
-                            import gc
-                            from app.index_builder import build_index
-                            get_retriever.clear()
-                            gc.collect()
-                            build_index()
+                            from app.index_builder import delete_scheme_from_index, add_scheme_to_index
+
+                            delete_scheme_from_index(old_name)
+                            updated_scheme = next((s for s in get_all_schemes() if s.name == new_name), None)
+                            if updated_scheme:
+                                add_scheme_to_index(updated_scheme)
                             st.success("✅ Knowledge base updated")
                         except Exception as e:
                             st.error(f"Failed to update knowledge base: {e}")
@@ -131,6 +132,7 @@ if st.session_state.admin_logged_in:
                     st.error("❌ Scheme update failed")
 
             if st.button("Delete Scheme"):
+                scheme_name_to_delete = selected_scheme.name  # capture before the row is deleted from DB
 
                 success = delete_scheme(selected_scheme.id)
 
@@ -139,12 +141,12 @@ if st.session_state.admin_logged_in:
                         try:
                             from app.index_builder import delete_scheme_from_index
 
-                            delete_scheme_from_index(name)
+                            delete_scheme_from_index(scheme_name_to_delete)
                             st.success("✅ Knowledge base updated")
                         except Exception as e:
                             st.error(f"Failed to update knowledge base: {e}")
                 else:
-                        st.error("❌ Scheme delete failed")
+                    st.error("❌ Scheme delete failed")
 
 
     with st.sidebar.expander("➕ Add New Scheme"):
@@ -172,7 +174,6 @@ if st.session_state.admin_logged_in:
                         "category": category
                     })
 
-                    from app.index_builder import build_index
 
                     with st.spinner("Updating knowledge base..."):
                         try:
@@ -185,7 +186,7 @@ if st.session_state.admin_logged_in:
                         except Exception as e:
                             st.error(f"Failed to update knowledge base: {e}")
 
-                    st.cache_resource.clear()
+
 
                     st.success("✅ Scheme added to database")
             else:
@@ -241,12 +242,18 @@ if st.session_state.admin_logged_in:
 
                             with st.spinner("Updating knowledge base..."):
                                 try:
-                                    from app.retriever import get_retriever
-                                    import gc
+                                    from app.index_builder import add_scheme_to_index
 
-                                    get_retriever.clear()
-                                    gc.collect()
-                                    build_index()
+                                    imported_names = [
+                                        str(row.get("name", "")).strip()
+                                        for _, row in df.iterrows()
+                                        if str(row.get("name", "")).strip()
+                                    ]
+                                    all_schemes_now = get_all_schemes()
+                                    for iname in imported_names:
+                                        scheme_obj = next((s for s in all_schemes_now if s.name == iname), None)
+                                        if scheme_obj:
+                                            add_scheme_to_index(scheme_obj)
                                     st.success("✅ Knowledge base updated")
                                 except Exception as e:
                                     st.error(f"Failed to update knowledge base: {e}")

@@ -253,7 +253,7 @@ python -m app.index_builder
 ## 6. Run Streamlit
 
 ```bash
-python -m streamlit run app/ui.py
+streamlit run streamlit_app.py
 ```
 
 ---

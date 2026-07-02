@@ -1,37 +1,22 @@
 import os
 from dotenv import load_dotenv
-from app.crud import  get_all_schemes
+from app.crud import get_all_schemes
+from app.categories import detect_category, CATEGORY_KEYWORDS  # see note below
+
 load_dotenv()
+
 
 def detect_query_category(query):
     q = query.lower()
-
-    if any(w in q for w in ["farmer", "farmers", "agriculture", "krishi", "kisan", "shetkari"]):
-        return "farmer"
-
-    if any(w in q for w in ["student", "students", "scholarship", "education", "college", "school"]):
-        return "student"
-
-    if any(w in q for w in ["health", "hospital", "medical", "arogya", "davakhana"]):
-        return "health"
-
-    if any(w in q for w in ["pension", "old age", "senior citizen", "widow", "niradhar", "disability", "divyang"]):
-        return "welfare"
-
-    if any(w in q for w in ["women", "woman", "girl", "mahila", "kanya", "ladki"]):
-        return "women"
-
-    if any(w in q for w in ["house", "housing", "home", "awas", "gharkul"]):
-        return "housing"
-
-    if any(w in q for w in ["employment", "job", "skill", "rojgar", "livelihood"]):
-        return "employment"
-
-    # Keep loan LAST so pension/welfare/other support schemes don't get misclassified
-    if any(w in q for w in ["loan", "karj", "bank", "credit"]):
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        if category == "loan":
+            continue  # keep loan last so it doesn't shadow welfare/farmer etc.
+        if any(w in q for w in keywords):
+            return category
+    if any(w in q for w in CATEGORY_KEYWORDS.get("loan", [])):
         return "loan"
-
     return None
+
 
 PROMPT_TEMPLATE = """
 You are a helpful assistant specializing in Maharashtra government schemes.
@@ -80,101 +65,67 @@ User Question:
 Answer:
 """
 
-CATEGORY_KEYWORDS = {
-    "farmer": ["farmer", "agriculture", "krishi", "kisan", "shetkari", "crop", "irrigation", "dairy", "livestock", "fisheries"],
-    "student": ["student", "scholarship", "school", "college", "education", "hostel", "exam", "eklavy", "vidya", "shishya"],
-    "health": ["health", "hospital", "medical", "treatment", "insurance", "arogya", "davakhana", "ayushman"],
-    "welfare": ["pension", "old age", "senior citizen", "niradhar", "disability", "divyang", "widow", "destitute", "nivrutti"],
-    "housing": ["housing", "house", "awas", "gharkul", "property"],
-    "women": ["women", "girl", "mahila", "kanya", "ladki"],
-    "employment": ["job", "employment", "skill", "rojgar", "livelihood"],
-    "loan": ["loan", "karj", "bank", "credit", "finance", "interest"],
-}
-
 
 def scheme_matches_category(s, category):
     db_category = (s.category or "").lower().strip()
+    text = " ".join([s.name or "", s.category or "", s.eligibility or "",
+                      s.benefits or "", s.description or ""]).lower()
 
-    text = f"""
-    {s.name}
-    {s.category}
-    {s.eligibility}
-    {s.benefits}
-    {s.description}
-    """.lower()
-
-    # Trust correct DB category if present
     if db_category == category:
         return True
-
-    # Fallback to keyword matching for old General/empty categories
     return any(w in text for w in CATEGORY_KEYWORDS.get(category, []))
+
 
 def get_gemini_model():
     import google.generativeai as genai
-
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
+    api_key = os.getenv("GEMINI_API_KEY")  # <-- fixed to match .env.example
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set. Check your .env file.")
+    genai.configure(api_key=api_key)
     return genai.GenerativeModel("models/gemini-flash-latest")
+
+
 def ask_question(question: str, chat_history: str = "") -> dict:
-    combined_query = f"{chat_history} {question}"
-    category = detect_query_category(combined_query)
+    try:
+        combined_query = f"{chat_history} {question}".strip()
+        category = detect_query_category(combined_query)
 
-    # CATEGORY ROUTE: for queries like farmer schemes, pension schemes, student schemes
-    if category:
-        all_schemes = get_all_schemes()
+        if category:
+            all_schemes = get_all_schemes()
+            matched = [s for s in all_schemes if scheme_matches_category(s, category)][:10]
 
-        matched_docs = []
+            if not matched:
+                return {"answer": f"No {category} schemes found in the knowledge base.", "sources": []}
 
-        for s in all_schemes:
-            if scheme_matches_category(s, category):
-                matched_docs.append(f"""
-        Scheme Name: {s.name}
-        Eligibility: {s.eligibility}
-        Benefits: {s.benefits}
-        """)
+            context = "\n\n".join(
+                f"Scheme Name: {s.name}\nEligibility: {s.eligibility}\nBenefits: {s.benefits}"
+                for s in matched
+            )
+            sources = [s.name for s in matched]
 
-        matched_docs = matched_docs[:10]
+        else:
+            from app.retriever import get_retriever
+            retriever = get_retriever(k=10)
+            docs = retriever.invoke(f"{question} Maharashtra government scheme")[:10]
 
-        if not matched_docs:
-            return {
-                "answer": f"No {category} schemes found in the knowledge base.",
-                "sources": []
-            }
+            if not docs:
+                return {"answer": "No relevant schemes found. Please try rephrasing your query.", "sources": []}
 
-        context = "\n\n".join(matched_docs)
+            context = "\n\n".join(doc.page_content for doc in docs)
+            sources = [doc.metadata.get("name", "Unknown scheme") for doc in docs]
+
+        prompt = PROMPT_TEMPLATE.format(
+            context=context,
+            question=question,
+            chat_history=chat_history[-2000:]
+        )
+        model = get_gemini_model()
+        response = model.generate_content(prompt)
+
+        return {"answer": response.text, "sources": sources}
+
+    except Exception as e:
         return {
-            "answer": context,
-            "sources": []
+            "answer": "Sorry, I ran into a problem answering that. Please try again in a moment.",
+            "sources": [],
         }
-
-    # SEMANTIC ROUTE: for natural queries like "I need hostel help for college"
-    else:
-        from app.retriever import get_retriever
-        retriever = get_retriever(k=10)
-        query = question + " Maharashtra government scheme"
-        docs = retriever.invoke(query)
-
-        docs = docs[:10]
-
-        if not docs:
-            return {
-                "answer": "No relevant schemes found. Please try rephrasing your query.",
-                "sources": []
-            }
-
-        context = "\n\n".join([doc.page_content for doc in docs])
-
-    prompt = PROMPT_TEMPLATE.format(
-        context=context,
-        question=question,
-        chat_history=chat_history
-    )
-
-    model = get_gemini_model()
-    response = model.generate_content(prompt)
-
-    return {
-        "answer": response.text,
-        "sources": []
-    }

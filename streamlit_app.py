@@ -3,6 +3,7 @@ from app.crud import add_scheme, get_all_schemes, scheme_exists, delete_scheme, 
 import os
 from dotenv import load_dotenv
 import pandas as pd
+import gc
 
 load_dotenv()
 
@@ -115,8 +116,17 @@ if st.session_state.admin_logged_in:
                 })
 
                 if success:
-                    st.success("✅ Scheme updated in database")
-                    st.warning("⚠️ Knowledge base rebuild required")
+                    with st.spinner("Updating knowledge base..."):
+                        try:
+                            from app.retriever import get_retriever
+                            import gc
+                            from app.index_builder import build_index
+                            get_retriever.clear()
+                            gc.collect()
+                            build_index()
+                            st.success("✅ Knowledge base updated")
+                        except Exception as e:
+                            st.error(f"Failed to update knowledge base: {e}")
                 else:
                     st.error("❌ Scheme update failed")
 
@@ -125,8 +135,14 @@ if st.session_state.admin_logged_in:
                 success = delete_scheme(selected_scheme.id)
 
                 if success:
-                        st.success("🗑️ Scheme deleted from database")
-                        st.warning("⚠️ Knowledge base rebuild required")
+                    with st.spinner("Updating knowledge base..."):
+                        try:
+                            from app.index_builder import delete_scheme_from_index
+
+                            delete_scheme_from_index(name)
+                            st.success("✅ Knowledge base updated")
+                        except Exception as e:
+                            st.error(f"Failed to update knowledge base: {e}")
                 else:
                         st.error("❌ Scheme delete failed")
 
@@ -159,8 +175,15 @@ if st.session_state.admin_logged_in:
                     from app.index_builder import build_index
 
                     with st.spinner("Updating knowledge base..."):
-                        #build_index()
-                        st.warning("⚠️ Knowledge base rebuild required")
+                        try:
+                            from app.index_builder import add_scheme_to_index
+
+                            new_scheme = next((s for s in get_all_schemes() if s.name == name), None)
+                            if new_scheme:
+                                add_scheme_to_index(new_scheme)
+                            st.success("✅ Knowledge base updated")
+                        except Exception as e:
+                            st.error(f"Failed to update knowledge base: {e}")
 
                     st.cache_resource.clear()
 
@@ -172,49 +195,61 @@ if st.session_state.admin_logged_in:
             uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
 
             if uploaded_file is not None:
-                df = pd.read_csv(uploaded_file)
+                try:
+                    df = pd.read_csv(uploaded_file)
+                except Exception as e:
+                    st.error(f"Couldn't read that CSV file: {e}")
+                    df = None
 
-                st.write("Preview:")
-                st.dataframe(df.head())
+                if df is not None:
+                    st.write("Preview:")
+                    st.dataframe(df.head())
 
-                required_columns = ["name", "description", "eligibility", "benefits"]
+                    required_columns = ["name", "description", "eligibility", "benefits"]
+                    missing_columns = [col for col in required_columns if col not in df.columns]
 
-                missing_columns = [
-                    col for col in required_columns
-                    if col not in df.columns
-                ]
+                    if missing_columns:
+                        st.error(f"Missing columns: {missing_columns}")
+                    else:
+                        if st.button("Import CSV Schemes"):
+                            added = 0
+                            skipped = 0
 
-                if missing_columns:
-                    st.error(f"Missing columns: {missing_columns}")
-                else:
-                    if st.button("Import CSV Schemes"):
-                        added = 0
-                        skipped = 0
+                            for _, row in df.iterrows():
+                                name = str(row.get("name", "")).strip()
 
-                        for _, row in df.iterrows():
-                            name = str(row.get("name", "")).strip()
+                                if not name:
+                                    skipped += 1
+                                    continue
 
-                            if not name:
-                                skipped += 1
-                                continue
+                                if scheme_exists(name):
+                                    skipped += 1
+                                    continue
 
-                            if scheme_exists(name):
-                                skipped += 1
-                                continue
+                                add_scheme({
+                                    "name": name,
+                                    "description": str(row.get("description", "")),
+                                    "eligibility": str(row.get("eligibility", "")),
+                                    "benefits": str(row.get("benefits", "")),
+                                    "state": str(row.get("state", "Maharashtra")),
+                                    "category": str(row.get("category", "general"))
+                                })
 
-                            add_scheme({
-                                "name": name,
-                                "description": str(row.get("description", "")),
-                                "eligibility": str(row.get("eligibility", "")),
-                                "benefits": str(row.get("benefits", "")),
-                                "state": str(row.get("state", "Maharashtra")),
-                                "category": str(row.get("category", "general"))
-                            })
+                                added += 1
 
-                            added += 1
+                            st.success(f"✅ Imported {added} schemes. Skipped {skipped}.")
 
-                        st.success(f"✅ Imported {added} schemes. Skipped {skipped}.")
-                        st.warning("⚠️ Knowledge base rebuild required")
+                            with st.spinner("Updating knowledge base..."):
+                                try:
+                                    from app.retriever import get_retriever
+                                    import gc
+
+                                    get_retriever.clear()
+                                    gc.collect()
+                                    build_index()
+                                    st.success("✅ Knowledge base updated")
+                                except Exception as e:
+                                    st.error(f"Failed to update knowledge base: {e}")
 
 
 else:

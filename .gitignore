@@ -5,3 +5,4 @@ __pycache__/
 info/chroma_db/
 .DS_Store
 .idea/
+*.db
